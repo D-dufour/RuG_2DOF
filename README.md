@@ -52,4 +52,6 @@ These limits are used both for the real robot motions and for shading the reacha
 
 ![image3](dynamixel_webapp/image2.png)
 
+Devloped by Damien Dufour
+For Questions, contact damidufo@gmail.com
 
