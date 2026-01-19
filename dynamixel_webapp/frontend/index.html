@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Planar Manipulator Control | University of Groningen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Local Socket.IO client (place socket.io.min.js in static/js) -->
+  <script src="/static/js/socket.io.min.js"></script>
+  <!-- Chart.js for plotting -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <header class="ug-header">
+    <div class="ug-bar">
+      <div class="ug-logo-lockup">
+        <img src="/static/img/ug_logo.png" alt="University of Groningen logo" class="ug-logo">
+      </div>
+      <div class="ug-app-title">
+        <h1>2-DOF RuG Manipulator</h1>
+        <p>Mechanical Craftsmanship & Design and Construction</p>
+      </div>
+    </div>
+    <div class="ug-subbar">
+      <div>
+        <h2>Control Dashboard</h2>
+        <p>Real-Time Monitoring and Tuning of the 2-DOF Manipulator.</p>
+      </div>
+      <div class="ug-status">
+        <span id="backend-status" class="ug-status-chip">Socket: connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="page-tabs">
+    <button class="page-tab active" data-target="view-joint">Joint control</button>
+    <button class="page-tab" data-target="view-ik">IK drawing</button>
+  </nav>
+
+  <main class="layout">
+    <section class="panel panel-main">
+      <div id="view-joint" class="page active">
+        <section class="panel-main-inner">
+          <div class="panel-header">
+            <h2>Connection</h2>
+            <p>Scan for Servos and connect.</p>
+          </div>
+
+          <section class="connection-row">
+            <div class="connection-fields">
+              <div class="field-row">
+                <label for="serial-port-select">Serial port</label>
+                <div class="field-inline">
+                  <select id="serial-port-select"></select>
+                  <button class="btn secondary" id="refresh-ports-btn">Refresh</button>
+                </div>
+              </div>
+
+              <div class="field-row grid-3">
+                <div>
+                  <label for="baudrate-select">Baudrate</label>
+                  <select id="baudrate-select">
+                    <option value="57600" selected>57600</option>
+                    <option value="115200">115200</option>
+                    <option value="1000000">1000000</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="scan-id-min">ID from</label>
+                  <input id="scan-id-min" type="number" min="0" max="252" value="1">
+                </div>
+                <div>
+                  <label for="scan-id-max">ID to</label>
+                  <input id="scan-id-max" type="number" min="0" max="252" value="10">
+                </div>
+              </div>
+
+              <div class="field-row">
+                <label>Scan result</label>
+                <div id="scan-results" class="scan-results">
+                  <span class="scan-placeholder">Click “Scan bus” to search for servos.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="connection-actions">
+              <button class="btn secondary" id="scan-servos-btn">Scan bus</button>
+              <button class="btn primary" id="connect-btn">Connect</button>
+              <button class="btn subtle" id="disconnect-btn">Disconnect</button>
+              <p id="bus-status" class="bus-status">Bus: not connected.</p>
+            </div>
+          </section>
+
+          <div class="panel-header panel-header-top">
+            <h2>Servo Control</h2>
+            <p>Configure operating modes, PID gains and motion setpoints per joint.</p>
+          </div>
+
+          <div class="card card-servo">
+            <div class="servo-tabs">
+              <button class="servo-tab active" data-target="servo-panel-1">Joint 1 (ID 1)</button>
+              <button class="servo-tab" data-target="servo-panel-2">Joint 2 (ID 2)</button>
+            </div>
+
+            <div class="servo-panels">
+              <div id="servo-panel-1" class="servo-panel active">
+                <div class="servo-layout">
+                  <div class="servo-left">
+                    <div class="servo-row">
+                      <label>
+                        <input type="checkbox" class="torque-toggle" data-servo-id="1">
+                        Torque enable
+                      </label>
+                    </div>
+
+                    <div class="servo-row">
+                      <label for="mode-select-1">Operating mode</label>
+                      <select id="mode-select-1" class="mode-select" data-servo-id="1">
+                        <option value="0">0 – Current control</option>
+                        <option value="1">1 – Velocity control</option>
+                        <option value="3" selected>3 – Position control</option>
+                        <option value="4">4 – Extended position control</option>
+                        <option value="5">5 – Current-based position</option>
+                        <option value="16">16 – PWM control</option>
+                      </select>
+                    </div>
+
+                    <details class="servo-details" open>
+                      <summary>Setpoints</summary>
+                      <div class="grid grid-2">
+                        <div>
+                          <label for="goal-pos-deg-1">Goal position [deg]</label>
+                          <input id="goal-pos-deg-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="goal-vel-rpm-1">Goal velocity [RPM]</label>
+                          <input id="goal-vel-rpm-1" type="number" step="1" value="60">
+                        </div>
+                        <div>
+                          <label for="goal-current-ma-1">Goal current [mA]</label>
+                          <input id="goal-current-ma-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="goal-pwm-percent-1">Goal PWM [%]</label>
+                          <input id="goal-pwm-percent-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="profile-vel-unit-1">Profile velocity (raw)</label>
+                          <input id="profile-vel-unit-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="profile-accel-unit-1">Profile accel. (raw)</label>
+                          <input id="profile-accel-unit-1" type="number" step="1" value="0">
+                        </div>
+                      </div>
+                      <button class="btn primary btn-full apply-goals" data-servo-id="1">Send setpoints</button>
+                    </details>
+
+                    <details class="servo-details">
+                      <summary>PID tuning</summary>
+                      <div class="grid grid-2">
+                        <div>
+                          <label for="p-p-1">P</label>
+                          <input id="p-p-1" type="number" step="1" value="800">
+                        </div>
+                        <div>
+                          <label for="p-i-1">I</label>
+                          <input id="p-i-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="p-d-1">D</label>
+                          <input id="p-d-1" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="v-p-1">Velocity P</label>
+                          <input id="v-p-1" type="number" step="1" value="100">
+                        </div>
+                        <div>
+                          <label for="v-i-1">Velocity I</label>
+                          <input id="v-i-1" type="number" step="1" value="0">
+                        </div>
+                      </div>
+                      <button class="btn secondary btn-full apply-gains" data-servo-id="1">Configure</button>
+                    </details>
+                  </div>
+
+                  <div class="servo-right">
+                    <div class="card telemetry-card">
+                      <div class="card-header">
+                        <h3>Joint 1 telemetry</h3>
+                      </div>
+                      <div class="telemetry-grid">
+                        <div>
+                          <div class="telemetry-label">Mode</div>
+                          <div id="mode-name-1" class="telemetry-value">—</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Moving</div>
+                          <div id="moving-1" class="telemetry-value">—</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Position</div>
+                          <div class="telemetry-value">
+                            <span id="pos-deg-1">—</span> ° (<span id="pos-raw-1">—</span> ticks)
+                          </div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Velocity</div>
+                          <div class="telemetry-value"><span id="vel-rpm-1">—</span> RPM</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Current</div>
+                          <div class="telemetry-value"><span id="current-ma-1">—</span> mA</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">PWM</div>
+                          <div class="telemetry-value"><span id="pwm-percent-1">—</span> %</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="card chart-card">
+                      <div class="card-header">
+                        <h3>Position vs Time</h3>
+                      </div>
+                      <div class="chart-container">
+                        <canvas id="pos-chart-1"></canvas>
+                      </div>
+                    </div>
+
+                    <div class="card chart-card">
+                      <div class="card-header">
+                        <h3>Velocity vs Time</h3>
+                      </div>
+                      <div class="chart-container">
+                        <canvas id="vel-chart-1"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="servo-panel-2" class="servo-panel">
+                <div class="servo-layout">
+                  <div class="servo-left">
+                    <div class="servo-row">
+                      <label>
+                        <input type="checkbox" class="torque-toggle" data-servo-id="2">
+                        Torque enable
+                      </label>
+                    </div>
+
+                    <div class="servo-row">
+                      <label for="mode-select-2">Operating mode</label>
+                      <select id="mode-select-2" class="mode-select" data-servo-id="2">
+                        <option value="0">0 – Current control</option>
+                        <option value="1">1 – Velocity control</option>
+                        <option value="3" selected>3 – Position control</option>
+                        <option value="4">4 – Extended position control</option>
+                        <option value="5">5 – Current-based position</option>
+                        <option value="16">16 – PWM control</option>
+                      </select>
+                    </div>
+
+                    <details class="servo-details" open>
+                      <summary>Setpoints</summary>
+                      <div class="grid grid-2">
+                        <div>
+                          <label for="goal-pos-deg-2">Goal position [deg]</label>
+                          <input id="goal-pos-deg-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="goal-vel-rpm-2">Goal velocity [RPM]</label>
+                          <input id="goal-vel-rpm-2" type="number" step="1" value="60">
+                        </div>
+                        <div>
+                          <label for="goal-current-ma-2">Goal current [mA]</label>
+                          <input id="goal-current-ma-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="goal-pwm-percent-2">Goal PWM [%]</label>
+                          <input id="goal-pwm-percent-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="profile-vel-unit-2">Profile velocity (raw)</label>
+                          <input id="profile-vel-unit-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="profile-accel-unit-2">Profile accel. (raw)</label>
+                          <input id="profile-accel-unit-2" type="number" step="1" value="0">
+                        </div>
+                      </div>
+                      <button class="btn primary btn-full apply-goals" data-servo-id="2">Send setpoints</button>
+                    </details>
+
+                    <details class="servo-details">
+                      <summary>PID tuning</summary>
+                      <div class="grid grid-2">
+                        <div>
+                          <label for="p-p-2">P</label>
+                          <input id="p-p-2" type="number" step="1" value="800">
+                        </div>
+                        <div>
+                          <label for="p-i-2">I</label>
+                          <input id="p-i-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="p-d-2">D</label>
+                          <input id="p-d-2" type="number" step="1" value="0">
+                        </div>
+                        <div>
+                          <label for="v-p-2">Velocity P</label>
+                          <input id="v-p-2" type="number" step="1" value="100">
+                        </div>
+                        <div>
+                          <label for="v-i-2">Velocity I</label>
+                          <input id="v-i-2" type="number" step="1" value="0">
+                        </div>
+                      </div>
+                      <button class="btn secondary btn-full apply-gains" data-servo-id="2">Configure</button>
+                    </details>
+                  </div>
+
+                  <div class="servo-right">
+                    <div class="card telemetry-card">
+                      <div class="card-header">
+                        <h3>Joint 2 telemetry</h3>
+                      </div>
+                      <div class="telemetry-grid">
+                        <div>
+                          <div class="telemetry-label">Mode</div>
+                          <div id="mode-name-2" class="telemetry-value">—</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Moving</div>
+                          <div id="moving-2" class="telemetry-value">—</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Position</div>
+                          <div class="telemetry-value">
+                            <span id="pos-deg-2">—</span> ° (<span id="pos-raw-2">—</span> ticks)
+                          </div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Velocity</div>
+                          <div class="telemetry-value"><span id="vel-rpm-2">—</span> RPM</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">Current</div>
+                          <div class="telemetry-value"><span id="current-ma-2">—</span> mA</div>
+                        </div>
+                        <div>
+                          <div class="telemetry-label">PWM</div>
+                          <div class="telemetry-value"><span id="pwm-percent-2">—</span> %</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="card chart-card">
+                      <div class="card-header">
+                        <h3>Position vs Time</h3>
+                      </div>
+                      <div class="chart-container">
+                        <canvas id="pos-chart-2"></canvas>
+                      </div>
+                    </div>
+
+                    <div class="card chart-card">
+                      <div class="card-header">
+                        <h3>Velocity vs Time</h3>
+                      </div>
+                      <div class="chart-container">
+                        <canvas id="vel-chart-2"></canvas>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div> 
+          </div> 
+        </section>
+      </div>
+
+      <!-- IK DRAWING VIEW -->
+      <div id="view-ik" class="page">
+        <section class="panel-main-inner">
+          <div class="panel-header">
+            <h2>Inverse kinematics drawing</h2>
+            <p>Draw a path in the workspace; the 2-DOF manipulator will track it using IK in <strong>extended position mode.</strong></p>
+          </div>
+
+          <div class="ik-layout">
+            <div class="ik-controls card">
+              <div class="card-header">
+                <h3>Planar arm configuration</h3>
+              </div>
+              <div class="ik-controls-body">
+                <div class="grid ik-grid">
+                  <div>
+                    <label for="ik-l1">Link 1 length (cm)</label>
+                    <input id="ik-l1" type="number" step="1" value="120">
+                  </div>
+                  <div>
+                    <label for="ik-l2">Link 2 length (cm)</label>
+                    <input id="ik-l2" type="number" step="1" value="120">
+                  </div>
+                  <div>
+                    <label for="ik-id1">Joint 1 servo ID</label>
+                    <input id="ik-id1" type="number" step="1" value="1" min="0">
+                  </div>
+                  <div>
+                    <label for="ik-id2">Joint 2 servo ID</label>
+                    <input id="ik-id2" type="number" step="1" value="2" min="0">
+                  </div>
+                  <div>
+                    <label for="ik-off1">Joint 1 offset [deg]</label>
+                    <input id="ik-off1" type="number" step="1" value="0">
+                  </div>
+                  <div>
+                    <label for="ik-off2">Joint 2 offset [deg]</label>
+                    <input id="ik-off2" type="number" step="1" value="0">
+                  </div>
+                  <div>
+                    <label for="ik-speed">Playback step [ms]</label>
+                    <input id="ik-speed" type="number" step="5" value="50" min="5">
+                  </div>
+                  <div class="ik-elbow">
+                    <label>
+                      <input id="ik-elbow-up" type="checkbox">
+                      Use elbow-up configuration
+                    </label>
+                  </div>
+                </div>
+                <div class="ik-buttons">
+                  <button class="btn secondary" id="ik-apply">Apply config</button>
+                </div>
+                <p class="ik-help">
+                  The Joint 1 and Joint 2 offsets are used to understand the current position of the Manipulator. 
+                  Before using the drawing feature, please make sure to <strong>position the manipulator in its origin position (straight link).</strong>
+                  Look at the <strong>telemetry of each joint and fill in the angle you see into the offsets.</strong>
+                </p>
+              </div>
+            </div>
+
+            <div class="ik-canvas-card card">
+              <div class="card-header">
+                <h3>Draw path</h3>
+              </div>
+              <div class="ik-canvas-body">
+                <canvas id="ik-canvas"></canvas>
+                <div class="ik-canvas-actions">
+                  <button class="btn secondary" id="ik-clear">Clear drawing</button>
+                  <button class="btn primary" id="ik-play">Draw</button>
+                </div>
+                <p class="ik-help">
+                  Click and drag to draw. The 2-DOF should be in
+                  <strong>extended position mode</strong> with torque enabled on both joints.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </section>
+
+    <aside class="panel panel-log">
+      <div class="panel-header">
+        <h2>Backend activity</h2>
+        <p>Connection state and Terminal <Output></Output>.</p>
+      </div>
+      <div id="log-panel" class="log-panel"></div>
+    </aside>
+  </main>
+
+  <footer class="ug-footer">
+    <p> © University of Groningen &mdash; Faculty of Science and Engineering &mdash; Developed by Damien Dufour</p>
+    <p class="ug-footer-sub">2-DOF RuG Manipulator &bull; Web interface for teaching and research labs</p>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
