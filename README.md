@@ -21,6 +21,7 @@ The webapp lets you:
 
 > **2-DOF RuG Manipulator**  
 > A planar 2-link arm with revolute joints and link lengths \(l_1, l_2\).
+![image3](dynamixel_webapp/image1.png)
 
 ### Kinematic model
 
@@ -40,11 +41,15 @@ This gives the standard 2-R planar forward kinematics:
   \( x_e = x_1 + l_2 \cos(\theta_1 + \theta_2) \)  
   \( y_e = y_1 + l_2 \sin(\theta_1 + \theta_2) \)
 
+![image3](dynamixel_webapp/image3.png)
+
 The IK uses the analytical 2-R solution with an **elbow-up / elbow-down** option and joint limits:
 
 - θ₁ ∈ [−90°, +90°]  
 - θ₂ ∈ [−90°, +90°]
 
 These limits are used both for the real robot motions and for shading the reachable workspace in the IK drawing canvas.
+
+![image3](dynamixel_webapp/image2.png)
 
 
